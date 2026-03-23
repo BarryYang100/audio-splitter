@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Splitter - AI Minutes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0b0d11;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --surface3: #222733;
+    --border: #282d3c;
+    --border-hover: #3a4058;
+    --text: #e8eaf0;
+    --text2: #7d8399;
+    --text3: #555b70;
+    --accent: #3b82f6;
+    --accent-dim: rgba(59,130,246,0.12);
+    --accent-mid: rgba(59,130,246,0.25);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --orange: #f59e0b;
+    --orange-dim: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.1);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 760px; margin: 0 auto; padding: 40px 20px 100px; }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff;
+  }
+  .topbar-title {
+    font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+  }
+
+  /* Language switcher */
+  .lang-switcher {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .lang-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-right: 1px solid var(--border);
+    letter-spacing: 0.02em;
+  }
+  .lang-btn:last-child { border-right: none; }
+  .lang-btn:hover { color: var(--text); background: var(--surface2); }
+  .lang-btn.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--text), var(--text2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p {
+    color: var(--text2);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /* Config grid */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .config-card.full { grid-column: 1 / -1; }
+  .config-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text2);
+    margin-bottom: 10px;
+  }
+  .config-label .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .num-input {
+    width: 58px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 8px 6px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: var(--accent); }
+  .input-unit {
+    font-size: 13px;
+    color: var(--text3);
+    font-weight: 500;
+    min-width: 16px;
+  }
+  .format-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237d8399'%3E%3Cpath d='M6 8.5L1 3.5h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  .format-select:focus { border-color: var(--accent); }
+
+  /* Naming */
+  .naming-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .name-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: var(--accent); }
+  .name-input::placeholder { color: var(--text3); }
+  .name-preview {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .name-preview span { color: var(--accent); }
+
+  /* Dropzone */
+  .dropzone {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: var(--surface);
+    margin-top: 16px;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
+  }
+  .dz-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 13px;
+    background: var(--accent-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .dz-main { font-size: 15px; font-weight: 500; margin-bottom: 12px; }
+  .dz-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(59,130,246,0.18);
+    padding: 8px 16px;
+    border-radius: 8px;
+    line-height: 1.5;
+  }
+  .dz-sub .shield { font-style: normal; font-size: 14px; flex-shrink: 0; }
+  .dropzone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+
+  /* File list */
+  .file-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .file-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    animation: fadeUp 0.25s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(6px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+  .fi-icon {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .fi-info { flex:1; min-width:0; }
+  .fi-name {
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fi-meta {
+    font-size: 11px; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+    display: flex; gap: 10px;
+  }
+  .fi-remove {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 16px; padding: 4px;
+    border-radius: 6px; transition: all 0.2s; flex-shrink:0;
+  }
+  .fi-remove:hover { color: var(--red); background: var(--red-dim); }
+
+  /* Action */
+  .action-bar { margin-top: 22px; display: flex; justify-content: center; }
+  .process-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: none; border-radius: 10px;
+    padding: 13px 44px;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.01em;
+  }
+  .process-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 28px rgba(59,130,246,0.3);
+  }
+  .process-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Progress */
+  .progress-section { margin-top: 24px; display: none; }
+  .progress-section.active { display: block; }
+  .prog-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .prog-label { font-size: 13px; font-weight: 500; }
+  .prog-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--accent); font-weight: 600;
+  }
+  .prog-track {
+    height: 5px; background: var(--surface2);
+    border-radius: 100px; overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), #818cf8);
+    border-radius: 100px; width: 0%; transition: width 0.3s;
+  }
+  .prog-status {
+    font-size: 12px; color: var(--text2); margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Results */
+  .results { margin-top: 26px; display: none; }
+  .results.active { display: block; }
+  .res-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .res-header h3 {
+    font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .res-header .chk { color: var(--green); }
+  .dl-all-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 8px;
+    padding: 7px 16px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .dl-all-btn:hover {
+    background: rgba(34,197,94,0.18);
+    transform: translateY(-1px);
+  }
+  .res-list { display: flex; flex-direction: column; gap: 6px; }
+  .res-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    animation: fadeUp 0.25s ease;
+  }
+  .seg-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 3px 10px; border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .seg-info { flex:1; min-width:0; }
+  .seg-name {
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .seg-meta {
+    font-size: 11px; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+  .seg-dl {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); border-radius: 7px;
+    padding: 5px 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .seg-dl:hover {
+    border-color: var(--accent); color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* Audio info badge */
+  .audio-info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--orange);
+    background: var(--orange-dim);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px; font-weight: 500;
+    padding: 10px 22px; border-radius: 10px;
+    opacity: 0; transition: all 0.3s ease;
+    pointer-events: none; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 520px) {
+    .app { padding: 28px 14px 80px; }
+    .config-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 24px; }
+    .lang-btn { padding: 6px 10px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar with language switcher -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">S</div>
+      <div class="topbar-title">Audio Splitter</div>
+    </div>
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('zh')">中文</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('pt')">PT-BR</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <h1 id="t-title">MP3 / WAV 音频自动切割</h1>
+    <p id="t-subtitle">将长录音自动切成指定时长片段，保持原始音频质量，方便上传 ASR 系统</p>
+  </div>
+
+  <div class="config-grid">
+    <div class="config-card">
+      <div class="config-label"><span class="dot"></span><span id="t-maxdur">每段最大时长</span></div>
+      <div class="input-row">
+        <input type="number" class="num-input" id="minutes" value="19" min="1" max="59" />
+        <span class="input-unit" id="t-min">分</span>
+        <input type="number" class="num-input" id="seconds" value="50" min="0" max="59" />
+        <span class="input-unit" id="t-sec">秒</span>
+      </div>
+    </div>
+    <div class="config-card">
+      <div class="config-label"><span class="dot"></span><span id="t-format">输出格式</span></div>
+      <select class="format-select" id="outputFormat">
+        <option value="same" id="t-fmt-same">与原文件一致（推荐）</option>
+        <option value="mp3">MP3</option>
+        <option value="wav">WAV</option>
+      </select>
+    </div>
+    <div class="config-card full">
+      <div class="config-label"><span class="dot"></span><span id="t-naming">自定义命名前缀</span></div>
+      <div class="naming-row">
+        <input type="text" class="name-input" id="namePrefix" placeholder="" />
+      </div>
+      <div class="name-preview" id="namePreview">
+        <span id="t-preview-label">预览：</span> <span id="previewText">Dimas_001.mp3, Dimas_002.mp3 ...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dz-icon">🎵</div>
+    <div class="dz-main" id="t-dz-main">拖入音频文件，或点击选择</div>
+    <div class="dz-sub" id="t-dz-sub"><i class="shield">🔒</i><span id="t-dz-sub-text">支持 MP3 / WAV · 多文件批量处理 · 纯本地处理，不上传任何数据</span></div>
+    <input type="file" id="fileInput" accept=".mp3,.wav,.wave,audio/mpeg,audio/wav" multiple />
+  </div>
+
+  <div class="file-list" id="fileList"></div>
+
+  <div class="action-bar">
+    <button class="process-btn" id="processBtn" disabled>
+      <span id="t-startbtn">开始切割</span>
+    </button>
+  </div>
+
+  <div class="progress-section" id="progressSection">
+    <div class="prog-header">
+      <span class="prog-label" id="progressLabel">处理中...</span>
+      <span class="prog-pct" id="progressPct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progressFill"></div></div>
+    <div class="prog-status" id="progressStatus"></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="res-header">
+      <h3><span class="chk">✓</span> <span id="t-done">切割完成</span></h3>
+      <button class="dl-all-btn" id="downloadAllBtn"><span id="t-dlall">全部下载</span></button>
+    </div>
+    <div class="res-list" id="resultList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== i18n =====================
+const I18N = {
+  zh: {
+    title: 'MP3 / WAV 音频自动切割',
+    subtitle: '将长录音自动切成指定时长片段，保持原始音频质量，方便上传 ASR 系统',
+    maxdur: '每段最大时长',
+    min: '分', sec: '秒',
+    format: '输出格式',
+    fmtSame: '与原文件一致（推荐）',
+    naming: '自定义命名前缀',
+    namePlaceholder: '例如: Dimas（留空则使用原文件名）',
+    previewLabel: '预览：',
+    dzMain: '拖入音频文件，或点击选择',
+    dzSub: '支持 MP3 / WAV · 多文件批量处理 · 纯本地处理，不上传任何数据',
+    startBtn: '开始切割',
+    processing: '处理中...',
+    decoding: '正在解码：',
+    segment: '片段',
+    done: '切割完成',
+    dlAll: '全部下载',
+    dl: '下载',
+    toastDone: (n) => `切割完成，共 ${n} 个片段`,
+    toastErr: (m) => '处理出错: ' + m,
+    loadingEnc: '加载编码器...',
+    loadingMp3Enc: '加载 MP3 编码器...',
+  },
+  en: {
+    title: 'MP3 / WAV Audio Auto-Splitter',
+    subtitle: 'Split long recordings into segments of specified duration while preserving original audio quality',
+    maxdur: 'Max segment duration',
+    min: 'min', sec: 'sec',
+    format: 'Output format',
+    fmtSame: 'Same as source (recommended)',
+    naming: 'Custom naming prefix',
+    namePlaceholder: 'e.g.: Dimas (leave blank to use original filename)',
+    previewLabel: 'Preview: ',
+    dzMain: 'Drag audio files here, or click to browse',
+    dzSub: 'Supports MP3 / WAV · Batch processing · Fully local, no data uploaded',
+    startBtn: 'Start Splitting',
+    processing: 'Processing...',
+    decoding: 'Decoding: ',
+    segment: 'Segment',
+    done: 'Splitting Complete',
+    dlAll: 'Download All',
+    dl: 'Download',
+    toastDone: (n) => `Done! ${n} segments created`,
+    toastErr: (m) => 'Error: ' + m,
+    loadingEnc: 'Loading encoder...',
+    loadingMp3Enc: 'Loading MP3 encoder...',
+  },
+  pt: {
+    title: 'Divisor Automático de MP3 / WAV',
+    subtitle: 'Divida gravações longas em segmentos de duração definida, mantendo a qualidade original do áudio',
+    maxdur: 'Duração máx. por segmento',
+    min: 'min', sec: 'seg',
+    format: 'Formato de saída',
+    fmtSame: 'Igual ao original (recomendado)',
+    naming: 'Prefixo personalizado',
+    namePlaceholder: 'Ex: Dimas (deixe vazio para usar o nome original)',
+    previewLabel: 'Prévia: ',
+    dzMain: 'Arraste arquivos de áudio aqui ou clique para selecionar',
+    dzSub: 'Suporta MP3 / WAV · Processamento em lote · 100% local, nenhum dado é enviado',
+    startBtn: 'Iniciar Divisão',
+    processing: 'Processando...',
+    decoding: 'Decodificando: ',
+    segment: 'Segmento',
+    done: 'Divisão Concluída',
+    dlAll: 'Baixar Tudo',
+    dl: 'Baixar',
+    toastDone: (n) => `Concluído! ${n} segmentos criados`,
+    toastErr: (m) => 'Erro: ' + m,
+    loadingEnc: 'Carregando codificador...',
+    loadingMp3Enc: 'Carregando codificador MP3...',
+  }
+};
+
+let currentLang = 'zh';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  applyLang();
+}
+
+function t(key) { return I18N[currentLang][key]; }
+
+function applyLang() {
+  const L = I18N[currentLang];
+  document.getElementById('t-title').textContent = L.title;
+  document.getElementById('t-subtitle').textContent = L.subtitle;
+  document.getElementById('t-maxdur').textContent = L.maxdur;
+  document.getElementById('t-min').textContent = L.min;
+  document.getElementById('t-sec').textContent = L.sec;
+  document.getElementById('t-format').textContent = L.format;
+  document.getElementById('t-fmt-same').textContent = L.fmtSame;
+  document.getElementById('t-naming').textContent = L.naming;
+  document.getElementById('namePrefix').placeholder = L.namePlaceholder;
+  document.getElementById('t-preview-label').textContent = L.previewLabel;
+  document.getElementById('t-dz-main').textContent = L.dzMain;
+  document.getElementById('t-dz-sub-text').textContent = L.dzSub;
+  document.getElementById('t-startbtn').textContent = L.startBtn;
+  document.getElementById('t-done').textContent = L.done;
+  document.getElementById('t-dlall').textContent = L.dlAll;
+  updateNamePreview();
+}
+
+// ===================== Core Logic =====================
+let files = [];
+let fileInfos = []; // {file, duration, sampleRate, channels, format}
+let outputSegments = [];
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const processBtn = document.getElementById('processBtn');
+const progressSection = document.getElementById('progressSection');
+const progressLabel = document.getElementById('progressLabel');
+const progressPct = document.getElementById('progressPct');
+const progressFill = document.getElementById('progressFill');
+const progressStatus = document.getElementById('progressStatus');
+const resultsEl = document.getElementById('results');
+const resultList = document.getElementById('resultList');
+const downloadAllBtn = document.getElementById('downloadAllBtn');
+const namePrefix = document.getElementById('namePrefix');
+
+// Drag & Drop
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); addFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+namePrefix.addEventListener('input', updateNamePreview);
+
+function updateNamePreview() {
+  const prefix = namePrefix.value.trim();
+  const ext = document.getElementById('outputFormat').value === 'wav' ? 'wav' : 'mp3';
+  const name = prefix || 'Dimas';
+  document.getElementById('previewText').textContent = `${name}_001.${ext}, ${name}_002.${ext} ...`;
+}
+
+document.getElementById('outputFormat').addEventListener('change', updateNamePreview);
+
+function detectFormat(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'wav' || ext === 'wave') return 'wav';
+  return 'mp3';
+}
+
+async function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (files.find(x => x.name === f.name && x.size === f.size)) continue;
+    const format = detectFormat(f);
+    files.push(f);
+    // Probe audio info
+    try {
+      const dur = await getAudioDuration(f);
+      fileInfos.push({ file: f, duration: dur, format });
+    } catch(e) {
+      fileInfos.push({ file: f, duration: 0, format });
+    }
+  }
+  renderFiles();
+}
+
+function removeFile(index) {
+  files.splice(index, 1);
+  fileInfos.splice(index, 1);
+  renderFiles();
+}
+
+function getAudioDuration(file) {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration);
+      URL.revokeObjectURL(audio.src);
+    });
+    audio.addEventListener('error', () => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const buf = await ctx.decodeAudioData(e.target.result);
+          resolve(buf.duration);
+          ctx.close();
+        } catch(err) { reject(err); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+    audio.src = URL.createObjectURL(file);
+  });
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function renderFiles() {
+  fileList.innerHTML = '';
+  fileInfos.forEach((info, i) => {
+    const f = info.file;
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    const durStr = info.duration > 0 ? formatTime(info.duration) : '--:--';
+    const fmtBadge = info.format.toUpperCase();
+    div.innerHTML = `
+      <div class="fi-icon">🎵</div>
+      <div class="fi-info">
+        <div class="fi-name">${f.name}</div>
+        <div class="fi-meta">
+          <span>${formatSize(f.size)}</span>
+          <span>${durStr}</span>
+          <span class="audio-info-badge">${fmtBadge}</span>
+        </div>
+      </div>
+      <button class="fi-remove" onclick="removeFile(${i})">✕</button>
+    `;
+    fileList.appendChild(div);
+  });
+  processBtn.disabled = files.length === 0;
+}
+
+// ===================== Encoding =====================
+let lameLoaded = false;
+
+async function loadLame() {
+  if (lameLoaded) return;
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js';
+    script.onload = () => { lameLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('Failed to load lamejs'));
+    document.head.appendChild(script);
+  });
+}
+
+function encodeWav(audioBuffer, startSample, endSample) {
+  const numCh = audioBuffer.numberOfChannels;
+  const sr = audioBuffer.sampleRate;
+  const len = endSample - startSample;
+  const bytesPerSample = 2; // 16-bit
+  const dataSize = len * numCh * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buffer);
+
+  const ws = (o, s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  ws(0,'RIFF');
+  v.setUint32(4, 36 + dataSize, true);
+  ws(8,'WAVE');
+  ws(12,'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); // PCM
+  v.setUint16(22, numCh, true);
+  v.setUint32(24, sr, true);
+  v.setUint32(28, sr * numCh * bytesPerSample, true);
+  v.setUint16(32, numCh * bytesPerSample, true);
+  v.setUint16(34, 16, true);
+  ws(36,'data');
+  v.setUint32(40, dataSize, true);
+
+  const channels = [];
+  for(let c=0;c<numCh;c++) channels.push(audioBuffer.getChannelData(c));
+
+  let off = 44;
+  for(let i=startSample; i<endSample; i++) {
+    for(let c=0;c<numCh;c++) {
+      let s = Math.max(-1, Math.min(1, channels[c][i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function encodeMp3(audioBuffer, startSample, endSample, bitrate) {
+  const sr = audioBuffer.sampleRate;
+  const numCh = audioBuffer.numberOfChannels;
+  const len = endSample - startSample;
+  // Use high bitrate to preserve quality: 192 kbps min, or match estimated original
+  const kbps = Math.max(bitrate || 192, 128);
+  const mp3encoder = new lamejs.Mp3Encoder(numCh, sr, kbps);
+  const mp3Data = [];
+  const blockSize = 1152;
+
+  if (numCh === 1) {
+    const ch = audioBuffer.getChannelData(0);
+    const samples = new Int16Array(len);
+    for(let i=0;i<len;i++) {
+      let s = Math.max(-1, Math.min(1, ch[startSample+i]));
+      samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    for(let i=0;i<samples.length;i+=blockSize) {
+      const chunk = samples.subarray(i, Math.min(i+blockSize, samples.length));
+      const buf = mp3encoder.encodeBuffer(chunk);
+      if(buf.length > 0) mp3Data.push(buf);
+    }
+  } else {
+    const left = audioBuffer.getChannelData(0);
+    const right = audioBuffer.getChannelData(1);
+    const lSamples = new Int16Array(len);
+    const rSamples = new Int16Array(len);
+    for(let i=0;i<len;i++) {
+      let sl = Math.max(-1, Math.min(1, left[startSample+i]));
+      let sr2 = Math.max(-1, Math.min(1, right[startSample+i]));
+      lSamples[i] = sl < 0 ? sl * 0x8000 : sl * 0x7FFF;
+      rSamples[i] = sr2 < 0 ? sr2 * 0x8000 : sr2 * 0x7FFF;
+    }
+    for(let i=0;i<len;i+=blockSize) {
+      const end = Math.min(i+blockSize, len);
+      const buf = mp3encoder.encodeBuffer(lSamples.subarray(i,end), rSamples.subarray(i,end));
+      if(buf.length > 0) mp3Data.push(buf);
+    }
+  }
+  const flush = mp3encoder.flush();
+  if(flush.length > 0) mp3Data.push(flush);
+  return new Blob(mp3Data, { type: 'audio/mp3' });
+}
+
+// Estimate original MP3 bitrate from file size and duration
+function estimateBitrate(fileSize, duration) {
+  if(!duration || duration <= 0) return 192;
+  const bps = (fileSize * 8) / duration;
+  const kbps = Math.round(bps / 1000);
+  // Snap to common bitrates
+  const common = [64, 96, 128, 160, 192, 224, 256, 320];
+  let best = 192;
+  let minDiff = Infinity;
+  for(const b of common) {
+    const diff = Math.abs(b - kbps);
+    if(diff < minDiff) { minDiff = diff; best = b; }
+  }
+  return best;
+}
+
+// ===================== Process =====================
+processBtn.addEventListener('click', async () => {
+  if(files.length === 0) return;
+
+  const maxMin = parseInt(document.getElementById('minutes').value) || 19;
+  const maxSec = parseInt(document.getElementById('seconds').value) || 50;
+  const segDur = maxMin * 60 + maxSec;
+  const fmtChoice = document.getElementById('outputFormat').value;
+  const prefix = namePrefix.value.trim();
+
+  outputSegments = [];
+  resultList.innerHTML = '';
+  resultsEl.classList.remove('active');
+  progressSection.classList.add('active');
+  processBtn.disabled = true;
+
+  try {
+    // Pre-check if MP3 encoding will be needed
+    let needMp3 = false;
+    if(fmtChoice === 'mp3') needMp3 = true;
+    else if(fmtChoice === 'same') {
+      needMp3 = fileInfos.some(fi => fi.format === 'mp3');
+    }
+    if(needMp3) {
+      updateProg(0, t('loadingMp3Enc'));
+      await loadLame();
+    }
+
+    const totalFiles = fileInfos.length;
+    let globalSegIdx = 0;
+
+    for(let fi=0; fi<totalFiles; fi++) {
+      const info = fileInfos[fi];
+      const file = info.file;
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+
+      // Determine output format for this file
+      let outFmt = fmtChoice;
+      if(outFmt === 'same') outFmt = info.format;
+
+      const bitrate = (info.format === 'mp3') ? estimateBitrate(file.size, info.duration) : 192;
+
+      updateProg((fi/totalFiles)*100, t('decoding') + file.name);
+
+      const audioBuffer = await decodeAudioFile(file);
+      const totalSamples = audioBuffer.length;
+      const sampleRate = audioBuffer.sampleRate;
+      const segSamples = Math.floor(segDur * sampleRate);
+      const numSegs = Math.ceil(totalSamples / segSamples);
+
+      for(let si=0; si<numSegs; si++) {
+        const startSample = si * segSamples;
+        const endSample = Math.min(startSample + segSamples, totalSamples);
+        const sDur = (endSample - startSample) / sampleRate;
+
+        const pct = ((fi + (si+1)/numSegs) / totalFiles) * 100;
+        updateProg(pct, `${file.name} — ${t('segment')} ${si+1}/${numSegs}`);
+
+        let blob;
+        if(outFmt === 'wav') {
+          blob = encodeWav(audioBuffer, startSample, endSample);
+        } else {
+          blob = encodeMp3(audioBuffer, startSample, endSample, bitrate);
+        }
+
+        globalSegIdx++;
+        const segNum = String(globalSegIdx).padStart(3, '0');
+        let segName;
+        if(prefix) {
+          segName = `${prefix}_${segNum}.${outFmt}`;
+        } else {
+          segName = `${baseName}_${segNum}.${outFmt}`;
+        }
+
+        outputSegments.push({ name: segName, blob, duration: sDur, format: outFmt, bitrate });
+        await new Promise(r => setTimeout(r, 10));
+      }
+    }
+
+    updateProg(100, '✓');
+    showResults();
+    showToast(t('toastDone')(outputSegments.length));
+  } catch(err) {
+    console.error(err);
+    showToast(t('toastErr')(err.message));
+  }
+  processBtn.disabled = files.length === 0;
+});
+
+function decodeAudioFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = await ctx.decodeAudioData(e.target.result);
+        resolve(buf);
+        ctx.close();
+      } catch(err) { reject(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function updateProg(pct, status) {
+  progressFill.style.width = pct + '%';
+  progressPct.textContent = Math.round(pct) + '%';
+  progressLabel.textContent = t('processing');
+  if(status) progressStatus.textContent = status;
+}
+
+function showResults() {
+  resultsEl.classList.add('active');
+  resultList.innerHTML = '';
+  outputSegments.forEach((seg, i) => {
+    const div = document.createElement('div');
+    div.className = 'res-item';
+    const fmtLabel = seg.format.toUpperCase();
+    const bitrateInfo = seg.format === 'mp3' ? ` · ${seg.bitrate}kbps` : ' · 16bit PCM';
+    div.innerHTML = `
+      <span class="seg-badge">#${i+1}</span>
+      <div class="seg-info">
+        <div class="seg-name">${seg.name}</div>
+        <div class="seg-meta">${formatTime(seg.duration)} · ${formatSize(seg.blob.size)} · ${fmtLabel}${bitrateInfo}</div>
+      </div>
+      <button class="seg-dl" data-i="${i}">${t('dl')}</button>
+    `;
+    div.querySelector('.seg-dl').addEventListener('click', () => downloadSeg(i));
+    resultList.appendChild(div);
+  });
+}
+
+function downloadSeg(i) {
+  const seg = outputSegments[i];
+  const url = URL.createObjectURL(seg.blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = seg.name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+downloadAllBtn.addEventListener('click', () => {
+  outputSegments.forEach((_, i) => setTimeout(() => downloadSeg(i), i * 200));
+});
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Init
+updateNamePreview();
+</script>
+</body>
+</html>
